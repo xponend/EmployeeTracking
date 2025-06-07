@@ -1,0 +1,53 @@
+{% extends 'OrgDashboard.html' %}
+{% block body %}
+<div class="row align-items-center d-flex  justify-content-center">
+    <div class="col-12 mb-4">
+        <div class="card border-light shadow-sm components-section align-items-center d-flex  justify-content-center">
+            <div class="card-body align-items-center d-flex justify-content-center">
+                <div class="row mb-4">
+                    <div class="col-lg-12 col-sm-16">
+                        <h3 class="h3 text-center">Просмотр и редактирование встреч</h3>
+                    </div>
+                    {% if msg is not none and msg %}
+                    <img src="/static/html/assets/img/undraw_Remote_meeting_re_abe7.png">
+                    <div class="container">
+                        <div class="row">
+                            {% for result in msg %}
+                            <div class="card">
+                                <h4 class="card-header">
+                                    Название: {{result.m_name}}
+                                </h4>
+                                <div class="card-body">
+                                    <h5 class="card-text">Описание: {{result.m_desc}}</h5>
+                                    <h6 class="card-title">Дата и время начала: {{result.m_start_date}}
+                                        {{result.m_start_time}}</h6>
+                                    <h6 class="card-title">Дата и время окончания: {{result.m_stop_date}} {{result.m_stop_time}}
+                                    </h6>
+                                    <a href="http://localhost:3000?room={{result.m_uuid}}&name={{request.session.o_name}}"
+                                        target="_blank" class="btn btn-primary">Присоединиться к встрече</a>
+                                    <a href="edit-meet/{{result.id}}" class="btn btn-warning">Редактировать встречу</a>
+                                    <a href="del-meet/{{result.id}}" class="btn btn-danger">Удалить встречу</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            <br />
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-lg-12 col-sm-16">
+                        <center>
+                            <lottie-player src="https://assets7.lottiefiles.com/datafiles/vhvOcuUkH41HdrL/data.json"
+                                background="transparent" speed="1" style="width: 300px; height: 300px;" loop autoplay>
+                            </lottie-player>
+                        </center>
+                        <h3 class="h3 text-center">
+                            Записи не найдены!
+                        </h3>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

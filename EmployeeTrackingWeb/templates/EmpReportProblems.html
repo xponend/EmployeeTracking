@@ -1,0 +1,54 @@
+{% extends 'EmpDashboard.html' %}
+{% block body %}
+<div class="row align-items-center d-flex  justify-content-center">
+    <div class="col-12 mb-4">
+        <div class="card border-light shadow-sm components-section align-items-center d-flex  justify-content-center">
+            <div class="card-body align-items-center d-flex justify-content-center">
+                <div class="row mb-4">
+                    <div class="col-lg-12 col-sm-16">
+                        <h3 class="h3 text-center">СООБЩИТЬ О ПРОБЛЕМАХ</h3>
+                    </div>
+                    <img src="/static/html/assets/img/report_bug.png">
+                    <div class="card-body">
+                        <form action="/user_report_problems" method="POST" class="mt-4">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <div class="form-group">
+                                    <label class="my-1 mr-2" for="inlineFormCustomSelectPref">Выберите категорию
+                                        проблемы</label>
+                                    <select class="custom-select my-1 mr-sm-2" id="inlineFormCustomSelectPref" name="prob_type" required>
+                                        <option value="Login/Register/Forgot Password">Вход/Регистрация/Забытый пароль
+                                        </option>
+                                        <option value="Meetings">Встречи
+                                        </option>
+                                        <option value="Projects">Проекты
+                                        </option>
+                                        <option value="Boards">Доски
+                                        </option>
+                                        <option value="Tasks">Задачи
+                                        </option>
+                                        <option value="Leaves">Отпуска
+                                        </option>
+                                        <option value="App Track Usage Monitoring">Мониторинг использования приложений</option>
+                                        <option value="Desktop App">Настольное приложение
+                                        </option>
+                                        <option value="Video Call App">Приложение для видеозвонков
+                                        </option>
+                                        <option value="Others">Другое</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="h6" for="exampleFormControlTextarea1">Ваше сообщение</label>
+                                <textarea name="rquery" class="form-control"
+                                    placeholder="Чем мы можем помочь? Любая проблема/предложение" rows="4" required></textarea>
+                            </div>
+                            <input type="submit" class="btn btn-primary" value="ОТПРАВИТЬ!">
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends 'OrgDashboard.html' %}
+{% block body %}
+<div class="container">
+                        <div class="card-body">
+                            <form action="/overview-task" method="POST">
+                                {% csrf_token %}
+                                <div class="mb-4">
+                                    <div class="form-group">
+                                        <label class="my-1 mr-2" for="inlineFormCustomSelectPref">Приоритет</label>
+                                        <select class="custom-select my-1 mr-sm-2" id="inlineFormCustomSelectPref" name="t_priority_filter" required>
+                                            <option value="any">Любой
+                                            </option>
+                                            <option value="High Priority">Высокий приоритет
+                                            </option>
+                                            <option value="Medium Priority">Средний приоритет
+                                            </option>
+                                            <option value="Low Priority">Низкий приоритет
+                                            </option>
+                                        </select>
+                                    </div>
+                                <div class="form-group">
+                                    <label class="my-1 mr-2" for="inlineFormCustomSelectPref">Статус</label>
+                                    <select class="custom-select my-1 mr-sm-2" id="inlineFormCustomSelectPref" name="t_status_filter" required>
+                                        <option value="any">Любой
+                                        </option>
+                                        <option value="todo">К выполнению
+                                        </option>
+                                        <option value="completed">Завершено
+                                        </option>
+                                    </select>
+                                </div>
+                                    <input type="submit" class="btn btn-primary" value="Фильтровать">
+                            </form>
+                        </div>
+<div class="container-fluid kanban-container py-4 px-0">
+    <div class="row d-flex flex-nowrap">
+        {% for board in board_details %}
+        <div class="col-12 col-lg-6 col-xl-4 col-xxl-3">
+            <div class="card border-0 shadow p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h2 fw-bold mb-0 d-flex justify-content-center">{{ board.b_name|upper }}</h2>
+            </div>
+            <div id="kanbanColumn1" class="list-group kanban-list">
+                {% for task in board.boardids.all %}
+                <div class="card border-1 shadow p-4">
+                    <div class="card-header d-flex align-items-center justify-content-between border-0 p-0 mb-2">
+                        <h3 class="h3 mb-0">{{task.t_name|upper}}</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <p>{{task.t_desc}}</p>
+
+                        <h4 class="fs-6 fw-normal mt-4"><b>Проект:</b>
+                            {{task.p_id.p_name|upper}}</h4>
+
+                        <h4 class="fs-6 fw-normal mt-4"><b>Назначено:</b>
+                        {{task.e_id.e_name|upper}}</h4>
+                        <h4 class="fs-6 fw-normal mt-4"><b>Приоритет:</b>
+                                                            {% if task.t_priority == "High Priority" %}
+                                                        <span class="badge bg-danger">Высокий</span>
+                                                            {% elif task.t_priority == "Medium Priority" %}
+                                                        <span class="badge bg-warning">Средний</span>
+                                                            {% elif task.t_priority == "Low Priority" %}
+                                                        <span class="badge bg-info">Низкий</span>
+                                                            {% endif %}  
+                        </h4>
+                        <h5 class="fs-6 fw-normal mt-4"><b>Дата назначения:</b>
+                          {{task.t_assign_date}} 
+                        </h5>
+                        <h5 class="fs-6 fw-normal mt-4"><b>Крайний срок:</b>
+                            {{ task.t_deadline_date}}
+                        </h5>
+                    </div>
+                </div>
+                <br>
+                {% endfor %}
+            </div>
+            </div>
+        </div>
+        {% endfor %}
+        <br>
+        <br>
+    </div>
+    </div>
+    </div>
+    {% endblock %}

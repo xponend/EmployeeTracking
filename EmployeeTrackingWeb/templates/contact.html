@@ -1,0 +1,52 @@
+{% extends 'layout.html' %}
+{% block body %}
+<main>
+    <section class="d-flex align-items-center my-5 mt-lg-6 mb-lg-5">
+        <div class="container">
+            <div class="alert alert-success" role="alert">
+            {{msg}}
+            </div>
+            <div class="col-12 d-flex align-items-center justify-content-center">
+                <div class="bg-white shadow-soft border rounded border-light p-4 p-lg-5 w-80 fmxw-575">
+                    <div class="text-center text-md-center mb-4 mt-md-0">
+                        <div class="row justify-content-center">
+                            <div class="col-12 col-xl-8 text-center">
+                                <h1 class="display-2 mb-3">Свяжитесь с нами сегодня</h1>
+                                <p class="lead">Есть новый проект? Напишите нам о потребностях вашего проекта, мы отвечаем в тот же день.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <img src="/static/html/assets/img/contact_us_desc.png">
+                    <form action="/contact" method="POST">
+                        {% csrf_token %}
+                        <div class="form-group mb-4">
+                            <label class="h6" for="exampleInputName1">Ваше имя</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><span class="far fa-user"></span></span>
+                                </div>
+                                <input name="cname" class="form-control" placeholder="Например, Иван Иванов" type="text" required>
+                            </div>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="h6" for="exampleInputEmail1">Адрес электронной почты</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><span class="fas fa-at"></span></span>
+                                </div>
+                                <input name="cemail" class="form-control" placeholder="example@company.com" type="email" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="h6" for="exampleFormControlTextarea1">Ваше сообщение</label>
+                            <textarea name="cquery" class="form-control" placeholder="Чем мы можем помочь?" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-block rounded btn-primary mt-5">Отправить сообщение</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        </div>
+    </section>
+</main>
+{% endblock %}
