@@ -1,7 +1,7 @@
 const electron = require('electron')
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
-const { ipcMain, powerMonitor, desktopCapturer } = electron
+const { ipcMain, desktopCapturer, powerMonitor } = electron
 const path = require('path')
 const url = require('url')
 
@@ -15,10 +15,18 @@ function createWindow () {
       nodeIntegration: true,
       contextIsolation: false,
       webSecurity: false,
-      enableRemoteModule: true,
       sandbox: false
     }
   })
+
+  // Enable all permissions for media capture
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(true);
+  });
+
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    return true;
+  });
 
   mainWindow.loadURL(url.format({
     pathname: path.join(__dirname, '/gui/gui.html'),
@@ -26,43 +34,70 @@ function createWindow () {
     slashes: true
   }))
 
-  // Setup power monitoring
-  setupPowerMonitoring();
-  
-  // Setup screen capture IPC
-  setupScreenCaptureIPC();
-
-  // Handle permissions
-  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media') {
-      callback(true);
-    } else {
-      callback(false);
-    }
-  });
+  // Setup IPC handlers
+  setupIPC();
 
   mainWindow.on('closed', function () {
     mainWindow = null
   })
 }
 
-function setupScreenCaptureIPC() {
-  // Handle screen capture requests from renderer
-  ipcMain.handle('get-desktop-sources', async () => {
+function setupIPC() {
+  // Handle screen capture requests
+  ipcMain.handle('capture-screen', async () => {
     try {
+      console.log('Main process: Getting desktop sources...');
       const sources = await desktopCapturer.getSources({ 
-        types: ['window', 'screen'] 
+        types: ['window', 'screen'],
+        thumbnailSize: { width: 800, height: 600 }
       });
-      return sources;
+      
+      console.log(`Main process: Found ${sources.length} sources`);
+      
+      // Find the main screen
+      for (const source of sources) {
+        if (
+          source.name === 'Entire screen' ||
+          source.name === 'Screen 1' ||
+          source.name === 'Screen 2'
+        ) {
+          console.log(`Main process: Using source - ${source.name}`);
+          return {
+            success: true,
+            sourceId: source.id,
+            sourceName: source.name
+          };
+        }
+      }
+      
+      // If no main screen found, use the first available source
+      if (sources.length > 0) {
+        console.log(`Main process: Using first available source - ${sources[0].name}`);
+        return {
+          success: true,
+          sourceId: sources[0].id,
+          sourceName: sources[0].name
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'No screen sources found'
+      };
     } catch (error) {
-      console.error('Error getting desktop sources:', error);
-      return [];
+      console.error('Main process: Error getting desktop sources:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   });
+
+  // Handle power monitoring events
+  setupPowerMonitoring();
 }
 
 function setupPowerMonitoring() {
-  // Forward power events to renderer process
   powerMonitor.on('suspend', () => {
     if (mainWindow) {
       mainWindow.webContents.send('power-event', {

@@ -1,15 +1,8 @@
 const electron = require('electron');
 const { PythonShell } = require('python-shell');
 const { join } = require('path');
+const { ipcRenderer } = require('electron');
 const mysql = require('mysql2');
-
-// Try to get desktopCapturer with fallbacks
-let desktopCapturer;
-try {
-  desktopCapturer = electron.desktopCapturer || require('electron').desktopCapturer;
-} catch (error) {
-  console.error('Failed to load desktopCapturer:', error);
-}
 
 // Load axios with error handling
 let axios;
@@ -62,6 +55,14 @@ console.log(e_id);
 console.log(e_name);
 console.log(o_id);
 
+// Listen for power events from main process
+if (ipcRenderer) {
+  ipcRenderer.on('power-event', (event, data) => {
+    console.log(`Power event: ${data.type}`);
+    pushPowerLogsToDB(data.status, getTimeStamp(), e_id, o_id);
+  });
+}
+
 function getTimeStamp() {
   var today = new Date();
   var date =
@@ -104,7 +105,7 @@ function pushPowerLogsToDB(pm_status, pm_log_ts, e_id_id, o_id_id) {
 }
 
 // Compress and resize image before saving
-function compressImage(canvas, quality = 0.7, maxWidth = 1280, maxHeight = 720) {
+function compressImage(canvas, quality = 0.3, maxWidth = 640, maxHeight = 480) {
   // Create a smaller canvas if the image is too large
   const originalWidth = canvas.width;
   const originalHeight = canvas.height;
@@ -132,10 +133,15 @@ function compressImage(canvas, quality = 0.7, maxWidth = 1280, maxHeight = 720) 
   ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
   
   // Return compressed base64 with reduced quality
-  return compressedCanvas.toDataURL('image/jpeg', quality);
+  const compressedData = compressedCanvas.toDataURL('image/jpeg', quality);
+  
+  // Log the size for debugging
+  console.log(`Compressed image size: ${Math.round(compressedData.length / 1024)} KB`);
+  
+  return compressedData;
 }
 
-function fullscreenScreenshot(callback, imageFormat) {
+async function fullscreenScreenshot(callback, imageFormat) {
   imageFormat = imageFormat || 'image/jpeg';
 
   const handleStream = (stream) => {
@@ -155,7 +161,7 @@ function fullscreenScreenshot(callback, imageFormat) {
 
       if (callback) {
         // Compress the image before sending to callback
-        const compressedImage = compressImage(canvas, 0.5, 800, 600);
+        const compressedImage = compressImage(canvas, 0.2, 640, 480);
         callback(compressedImage);
       } else {
         console.log('Нужен callback!');
@@ -175,110 +181,40 @@ function fullscreenScreenshot(callback, imageFormat) {
     console.log('Screenshot error:', e);
   };
 
-  // Check if desktopCapturer is available with multiple fallbacks
-  if (!desktopCapturer) {
-    try {
-      const { desktopCapturer: dc } = require('electron');
-      desktopCapturer = dc;
-    } catch (error) {
-      console.error('desktopCapturer is not available');
+  try {
+    console.log('Renderer: Requesting screen capture from main process...');
+    
+    // Use IPC to get screen source from main process
+    const result = await ipcRenderer.invoke('capture-screen');
+    
+    if (!result.success) {
+      console.error('Failed to get screen source:', result.error);
       return;
     }
-  }
-
-  if (!desktopCapturer || !desktopCapturer.getSources) {
-    console.error('desktopCapturer.getSources is not available');
-    return;
-  }
-
-  console.log('Attempting to get desktop sources...');
-  
-  // Use Promise-based approach for newer Electron versions
-  if (desktopCapturer.getSources.length === 1) {
-    desktopCapturer.getSources({ types: ['window', 'screen'] })
-      .then((sources) => {
-        console.log('Desktop sources retrieved:', sources.length);
-        
-        for (const source of sources) {
-          if (
-            source.name === 'Entire screen' ||
-            source.name === 'Screen 1' ||
-            source.name === 'Screen 2'
-          ) {
-            console.log('Using source:', source.name);
-            
-            navigator.mediaDevices
-              .getUserMedia({
-                audio: false,
-                video: {
-                  mandatory: {
-                    chromeMediaSource: 'desktop',
-                    chromeMediaSourceId: source.id,
-                    minWidth: 800,
-                    maxWidth: 800,
-                    minHeight: 600,
-                    maxHeight: 600,
-                  },
-                },
-              })
-              .then((stream) => {
-                handleStream(stream);
-              })
-              .catch((e) => {
-                handleError(e);
-              });
-            return;
-          }
-        }
-      })
-      .catch((error) => {
-        handleError(error);
-      });
-  } else {
-    // Older API with callback
-    desktopCapturer.getSources(
-      { types: ['window', 'screen'] },
-      (error, sources) => {
-        if (error) {
-          handleError(error);
-          return;
-        }
-
-        console.log('Desktop sources retrieved:', sources.length);
-
-        for (const source of sources) {
-          if (
-            source.name === 'Entire screen' ||
-            source.name === 'Screen 1' ||
-            source.name === 'Screen 2'
-          ) {
-            console.log('Using source:', source.name);
-            
-            navigator.mediaDevices
-              .getUserMedia({
-                audio: false,
-                video: {
-                  mandatory: {
-                    chromeMediaSource: 'desktop',
-                    chromeMediaSourceId: source.id,
-                    minWidth: 800,
-                    maxWidth: 800,
-                    minHeight: 600,
-                    maxHeight: 600,
-                  },
-                },
-              })
-              .then((stream) => {
-                handleStream(stream);
-              })
-              .catch((e) => {
-                handleError(e);
-              });
-            return;
-          }
-        }
-      }
-    );
+    
+    console.log(`Renderer: Got source ID: ${result.sourceId} for ${result.sourceName}`);
+    
+    // Use the source ID to capture screen
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: result.sourceId,
+          minWidth: 640,
+          maxWidth: 640,
+          minHeight: 480,
+          maxHeight: 480,
+        },
+      },
+    });
+    
+    console.log('Renderer: Successfully got media stream');
+    handleStream(stream);
+    
+  } catch (error) {
+    console.error('Renderer: Screenshot capture failed:', error);
+    handleError(error);
   }
 }
 
@@ -434,35 +370,52 @@ function monitoringApp(flag) {
 
     global.pyshell = new PythonShell('initApp.py', options);
 
-    const runAsync = () => {
+    // Handle Python script output and errors
+    global.pyshell.on('message', function (message) {
+      console.log('Python output:', message);
+    });
+
+    global.pyshell.on('error', function (error) {
+      console.error('Python error:', error);
+    });
+
+    global.pyshell.on('close', function () {
+      console.log('Python script closed');
+    });
+
+    const runAsync = async () => {
       if (loop_is_stopped) {
         console.log('запуск асинхронной функции');
         
-        fullscreenScreenshot(function (base64data) {
-          // Check connection before inserting
-          if (connection.state === 'disconnected') {
-            console.log('Connection is disconnected, skipping screenshot');
-            return;
-          }
-          
-          var sql =
-            'INSERT INTO ScreenShotsMonitoring (ssm_img, ssm_log_ts, e_id_id, o_id_id) VALUES (?, ?, ?, ?)';
-          connection.query(
-            sql,
-            [base64data, getTimeStamp(), e_id, o_id],
-            function (err, result) {
-              if (err) {
-                console.error('Screenshot database error:', err);
-                return;
-              }
-              console.log('Количество записей, вставленных для ssm: ' + result.affectedRows);
+        try {
+          await fullscreenScreenshot(function (base64data) {
+            // Check connection before inserting
+            if (connection.state === 'disconnected') {
+              console.log('Connection is disconnected, skipping screenshot');
+              return;
             }
-          );
-        }, 'image/jpeg');
+            
+            var sql =
+              'INSERT INTO ScreenShotsMonitoring (ssm_img, ssm_log_ts, e_id_id, o_id_id) VALUES (?, ?, ?, ?)';
+            connection.query(
+              sql,
+              [base64data, getTimeStamp(), e_id, o_id],
+              function (err, result) {
+                if (err) {
+                  console.error('Screenshot database error:', err);
+                  return;
+                }
+                console.log('Количество записей, вставленных для ssm: ' + result.affectedRows);
+              }
+            );
+          }, 'image/jpeg');
+        } catch (error) {
+          console.error('Screenshot capture error:', error);
+        }
 
         setTimeout(() => {
           if (loop_is_stopped) {
-            runAsync(); // Remove let v = since it's not needed
+            runAsync();
           }
         }, 10000);
 
@@ -501,6 +454,15 @@ function monitoringApp(flag) {
     }
 
     let destroyPyshell = new PythonShell('destroyApp.py', options);
+
+    // Handle Python script output and errors
+    destroyPyshell.on('message', function (message) {
+      console.log('Destroy Python output:', message);
+    });
+
+    destroyPyshell.on('error', function (error) {
+      console.error('Destroy Python error:', error);
+    });
 
     destroyPyshell.end(function (err) {
       if (err) {
