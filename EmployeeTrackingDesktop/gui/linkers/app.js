@@ -6,7 +6,7 @@ const powerMonitor = electron.remote.powerMonitor;
 const mysql = require('mysql2');
 const axios = require('axios');
 
-let loop_is_stopped = true;
+var loop_is_stopped = true;
 
 const connection = mysql.createConnection({
   host: 'localhost',
