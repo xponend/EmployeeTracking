@@ -1,66 +1,149 @@
 const electron = require('electron')
-// Module to control application life.
 const app = electron.app
-// Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow
-
+const { ipcMain, powerMonitor, desktopCapturer } = electron
 const path = require('path')
 const url = require('url')
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
 function createWindow () {
-  // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 800, 
+    width: 800,
     height: 600,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      webSecurity: false,
+      enableRemoteModule: true,
+      sandbox: false
     }
   })
 
-  // and load the index.html of the app.
   mainWindow.loadURL(url.format({
     pathname: path.join(__dirname, '/gui/gui.html'),
     protocol: 'file:',
     slashes: true
   }))
 
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+  // Setup power monitoring
+  setupPowerMonitoring();
+  
+  // Setup screen capture IPC
+  setupScreenCaptureIPC();
 
-  // Emitted when the window is closed.
+  // Handle permissions
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
   mainWindow.on('closed', function () {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
     mainWindow = null
   })
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+function setupScreenCaptureIPC() {
+  // Handle screen capture requests from renderer
+  ipcMain.handle('get-desktop-sources', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({ 
+        types: ['window', 'screen'] 
+      });
+      return sources;
+    } catch (error) {
+      console.error('Error getting desktop sources:', error);
+      return [];
+    }
+  });
+}
+
+function setupPowerMonitoring() {
+  // Forward power events to renderer process
+  powerMonitor.on('suspend', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('power-event', {
+        type: 'suspend',
+        status: '0',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  powerMonitor.on('resume', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('power-event', {
+        type: 'resume',
+        status: '1',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  powerMonitor.on('on-ac', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('power-event', {
+        type: 'on-ac',
+        status: '2',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  powerMonitor.on('on-battery', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('power-event', {
+        type: 'on-battery',
+        status: '3',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  powerMonitor.on('shutdown', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('power-event', {
+        type: 'shutdown',
+        status: '4',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  powerMonitor.on('lock-screen', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('power-event', {
+        type: 'lock-screen',
+        status: '5',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  powerMonitor.on('unlock-screen', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('power-event', {
+        type: 'unlock-screen',
+        status: '6',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+}
+
 app.on('ready', createWindow)
 
-// Quit when all windows are closed.
 app.on('window-all-closed', function () {
-  // On OS X it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-
+  if (process.platform !== 'darwin') {
     app.quit()
+  }
 })
 
 app.on('activate', function () {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   if (mainWindow === null) {
     createWindow()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.

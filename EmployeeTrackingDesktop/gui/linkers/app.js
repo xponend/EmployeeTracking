@@ -1,10 +1,16 @@
 const electron = require('electron');
-let { PythonShell } = require('python-shell');
+const { PythonShell } = require('python-shell');
 const { join } = require('path');
-const { desktopCapturer } = require('electron');
-const powerMonitor = electron.remote.powerMonitor;
+const { ipcRenderer } = require('electron');
 const mysql = require('mysql2');
-const axios = require('axios');
+
+// Load axios with error handling
+let axios;
+try {
+  axios = require('axios');
+} catch (error) {
+  console.error('Failed to load axios:', error);
+}
 
 var loop_is_stopped = true;
 
@@ -30,6 +36,14 @@ var o_id = sessionStorage.getItem('o_id');
 console.log(e_id);
 console.log(e_name);
 console.log(o_id);
+
+// Listen for power events from main process
+if (ipcRenderer) {
+  ipcRenderer.on('power-event', (event, data) => {
+    console.log(`Power event: ${data.type}`);
+    pushPowerLogsToDB(data.status, getTimeStamp(), e_id, o_id);
+  });
+}
 
 function getTimeStamp() {
   var today = new Date();
@@ -62,12 +76,10 @@ function pushPowerLogsToDB(pm_status, pm_log_ts, e_id_id, o_id_id) {
   );
 }
 
-function fullscreenScreenshot(callback, imageFormat) {
-  var _this = this;
-  this.callback = callback;
+async function fullscreenScreenshot(callback, imageFormat) {
   imageFormat = imageFormat || 'image/jpeg';
 
-  this.handleStream = (stream) => {
+  const handleStream = (stream) => {
     // Создать скрытый видео тег
     var video = document.createElement('video');
     video.style.cssText = 'position:absolute;top:-10000px;left:-10000px;';
@@ -88,9 +100,9 @@ function fullscreenScreenshot(callback, imageFormat) {
       // Нарисовать видео на холсте
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      if (_this.callback) {
+      if (callback) {
         // Сохранить скриншот в base64
-        _this.callback(canvas.toDataURL(imageFormat));
+        callback(canvas.toDataURL(imageFormat));
       } else {
         console.log('Нужен callback!');
       }
@@ -107,45 +119,50 @@ function fullscreenScreenshot(callback, imageFormat) {
     document.body.appendChild(video);
   };
 
-  this.handleError = function (e) {
-    console.log(e);
+  const handleError = function (e) {
+    console.log('Screenshot error:', e);
   };
 
-  desktopCapturer.getSources(
-    { types: ['window', 'screen'] },
-    (_ignore, sources) => {
-      for (const source of sources) {
-        // Фильтр: главный экран
-        if (
-          source.name === 'Entire screen' ||
-          source.name === 'Screen 1' ||
-          source.name === 'Screen 2'
-        ) {
-          navigator.mediaDevices
-            .getUserMedia({
-              audio: false,
-              video: {
-                mandatory: {
-                  chromeMediaSource: 'desktop',
-                  chromeMediaSourceId: source.id,
-                  minWidth: 1280,
-                  maxWidth: 1280,
-                  minHeight: 720,
-                  maxHeight: 720,
-                },
+  try {
+    // Use IPC to get desktop sources from main process
+    const sources = await ipcRenderer.invoke('get-desktop-sources');
+    
+    if (!sources || sources.length === 0) {
+      console.error('No desktop sources available');
+      return;
+    }
+
+    for (const source of sources) {
+      // Фильтр: главный экран
+      if (
+        source.name === 'Entire screen' ||
+        source.name === 'Screen 1' ||
+        source.name === 'Screen 2'
+      ) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: source.id,
+                minWidth: 1280,
+                maxWidth: 1280,
+                minHeight: 720,
+                maxHeight: 720,
               },
-            })
-            .then((stream) => {
-              handleStream(stream);
-            })
-            .catch((e) => {
-              handleError(e);
-            });
+            },
+          });
+          handleStream(stream);
           return;
+        } catch (e) {
+          handleError(e);
         }
       }
     }
-  );
+  } catch (error) {
+    console.error('Failed to get desktop sources:', error);
+  }
 }
 
 function pushStartAttendanceLogsToDB(
@@ -211,7 +228,12 @@ function pushStopAttendanceLogsToDB(
 }
 
 function loginMarkAttendance() {
-  axios
+  if (!axios) {
+    console.error('Axios is not available');
+    return Promise.reject('Axios not loaded');
+  }
+
+  return axios
     .get('http://ip-api.com/json/')
     .then(function (response) {
       console.log(response.data);
@@ -225,15 +247,17 @@ function loginMarkAttendance() {
       );
     })
     .catch(function (error) {
-      console.log(error);
-    })
-    .then(function () {
-      // всегда выполняется
+      console.log('Login attendance error:', error);
     });
 }
 
 function logoutMarkAttendance() {
-  axios
+  if (!axios) {
+    console.error('Axios is not available');
+    return Promise.reject('Axios not loaded');
+  }
+
+  return axios
     .get('http://ip-api.com/json/')
     .then(function (response) {
       console.log(response.data);
@@ -247,10 +271,7 @@ function logoutMarkAttendance() {
       );
     })
     .catch(function (error) {
-      console.log(error);
-    })
-    .then(function () {
-      // всегда выполняется
+      console.log('Logout attendance error:', error);
     });
 }
 
@@ -274,15 +295,14 @@ function monitoringApp(flag) {
     document.getElementById('stop').style.visibility = 'visible';
     document.getElementById('animationStart').style.visibility = 'visible';
 
-
     loginMarkAttendance();
 
     global.pyshell = new PythonShell('initApp.py', options);
 
-    const runAsync = () => {
+    const runAsync = async () => {
       if (loop_is_stopped) {
         console.log('запуск асинхронной функции');
-        fullscreenScreenshot(function (base64data) {
+        await fullscreenScreenshot(function (base64data) {
           var sql =
             'INSERT INTO ScreenShotsMonitoring (ssm_img, ssm_log_ts, e_id_id, o_id_id) VALUES (?, ?, ?, ?)';
           connection.query(
@@ -313,40 +333,9 @@ function monitoringApp(flag) {
 
     console.log('возврат: ', runAsync());
 
-    powerMonitor.on('suspend', () => {
-      console.log('Система переходит в спящий режим');
-      pushPowerLogsToDB('0', getTimeStamp(), e_id, o_id);
-    });
+    // Power monitoring is now handled by IPC events from main process
+    // No need to set up listeners here
 
-    powerMonitor.on('resume', () => {
-      console.log('Система возобновляет работу');
-      pushPowerLogsToDB('1', getTimeStamp(), e_id, o_id);
-    });
-
-    powerMonitor.on('on-ac', () => {
-      console.log('Система работает от сети переменного тока (зарядка)');
-      pushPowerLogsToDB('2', getTimeStamp(), e_id, o_id);
-    });
-
-    powerMonitor.on('on-battery', () => {
-      console.log('Система работает от батареи');
-      pushPowerLogsToDB('3', getTimeStamp(), e_id, o_id);
-    });
-
-    powerMonitor.on('shutdown', () => {
-      console.log('Система выключается');
-      pushPowerLogsToDB('4', getTimeStamp(), e_id, o_id);
-    });
-
-    powerMonitor.on('lock-screen', () => {
-      console.log('Система будет заблокирована');
-      pushPowerLogsToDB('5', getTimeStamp(), e_id, o_id);
-    });
-
-    powerMonitor.on('unlock-screen', () => {
-      console.log('Система разблокирована');
-      pushPowerLogsToDB('6', getTimeStamp(), e_id, o_id);
-    });
   } else {
     console.log('остановка мониторинга');
 
@@ -356,26 +345,25 @@ function monitoringApp(flag) {
     document.getElementById('stop').style.visibility = 'hidden';
     document.getElementById('animationStart').style.visibility = 'hidden';
 
-    powerMonitor.removeAllListeners('suspend');
-    powerMonitor.removeAllListeners('resume');
-    powerMonitor.removeAllListeners('on-ac');
-    powerMonitor.removeAllListeners('on-battery');
-    powerMonitor.removeAllListeners('shutdown');
-    powerMonitor.removeAllListeners('lock-screen');
-    powerMonitor.removeAllListeners('unlock-screen');
+    // Power monitoring cleanup is handled by main process
+    // No listeners to remove here
 
     logoutMarkAttendance();
 
-    pyshell.end(function (err) {
-      if (err) {
-        console.log(err);
-        console.log('завершено с ошибкой');
-      }
-      console.log('завершено без ошибок');
-    });
+    if (global.pyshell) {
+      global.pyshell.end(function (err) {
+        if (err) {
+          console.log(err);
+          console.log('завершено с ошибкой');
+        }
+        console.log('завершено без ошибок');
+      });
 
-    python_process = pyshell.childProcess;
-    python_process.kill('SIGINT');
+      python_process = global.pyshell.childProcess;
+      if (python_process) {
+        python_process.kill('SIGINT');
+      }
+    }
 
     let destroyPyshell = new PythonShell('destroyApp.py', options);
 
