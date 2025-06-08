@@ -1,8 +1,15 @@
 const electron = require('electron');
 const { PythonShell } = require('python-shell');
 const { join } = require('path');
-const { ipcRenderer } = require('electron');
 const mysql = require('mysql2');
+
+// Try to get desktopCapturer with fallbacks
+let desktopCapturer;
+try {
+  desktopCapturer = electron.desktopCapturer || require('electron').desktopCapturer;
+} catch (error) {
+  console.error('Failed to load desktopCapturer:', error);
+}
 
 // Load axios with error handling
 let axios;
@@ -14,19 +21,37 @@ try {
 
 var loop_is_stopped = true;
 
+// Create connection with better error handling and reconnection
 const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
   database: 'employeetracking',
   port: 3306,
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true
 });
+
+// Handle connection errors and reconnection
+function handleDisconnect() {
+  connection.on('error', function(err) {
+    console.log('Database connection error:', err);
+    if(err.code === 'PROTOCOL_CONNECTION_LOST') {
+      console.log('Reconnecting to database...');
+      handleDisconnect();
+    } else {
+      throw err;
+    }
+  });
+}
 
 connection.connect((err) => {
   if (err) {
     return console.error('ошибка: ' + err.message);
   }
   console.log('Подключено к серверу MySQL!');
+  handleDisconnect();
 });
 
 var e_id = sessionStorage.getItem('e_id');
@@ -36,14 +61,6 @@ var o_id = sessionStorage.getItem('o_id');
 console.log(e_id);
 console.log(e_name);
 console.log(o_id);
-
-// Listen for power events from main process
-if (ipcRenderer) {
-  ipcRenderer.on('power-event', (event, data) => {
-    console.log(`Power event: ${data.type}`);
-    pushPowerLogsToDB(data.status, getTimeStamp(), e_id, o_id);
-  });
-}
 
 function getTimeStamp() {
   var today = new Date();
@@ -66,51 +83,86 @@ function getDateOnly() {
 function pushPowerLogsToDB(pm_status, pm_log_ts, e_id_id, o_id_id) {
   var sql =
     'INSERT INTO PowerMonitoring (pm_status, pm_log_ts, e_id_id, o_id_id) VALUES (?, ?, ?, ?)';
+  
+  // Check if connection is alive
+  if (connection.state === 'disconnected') {
+    console.log('Connection is disconnected, skipping power log');
+    return;
+  }
+  
   connection.query(
     sql,
     [pm_status, pm_log_ts, e_id_id, o_id_id],
     function (err, result) {
-      if (err) throw err;
+      if (err) {
+        console.error('Power log error:', err);
+        return;
+      }
       console.log('Количество записей, вставленных для pm: ' + result.affectedRows);
     }
   );
 }
 
-async function fullscreenScreenshot(callback, imageFormat) {
+// Compress and resize image before saving
+function compressImage(canvas, quality = 0.7, maxWidth = 1280, maxHeight = 720) {
+  // Create a smaller canvas if the image is too large
+  const originalWidth = canvas.width;
+  const originalHeight = canvas.height;
+  
+  let newWidth = originalWidth;
+  let newHeight = originalHeight;
+  
+  // Calculate new dimensions while maintaining aspect ratio
+  if (originalWidth > maxWidth) {
+    newWidth = maxWidth;
+    newHeight = (originalHeight * maxWidth) / originalWidth;
+  }
+  
+  if (newHeight > maxHeight) {
+    newHeight = maxHeight;
+    newWidth = (originalWidth * maxHeight) / originalHeight;
+  }
+  
+  // Create new canvas with compressed size
+  const compressedCanvas = document.createElement('canvas');
+  compressedCanvas.width = newWidth;
+  compressedCanvas.height = newHeight;
+  
+  const ctx = compressedCanvas.getContext('2d');
+  ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
+  
+  // Return compressed base64 with reduced quality
+  return compressedCanvas.toDataURL('image/jpeg', quality);
+}
+
+function fullscreenScreenshot(callback, imageFormat) {
   imageFormat = imageFormat || 'image/jpeg';
 
   const handleStream = (stream) => {
-    // Создать скрытый видео тег
     var video = document.createElement('video');
     video.style.cssText = 'position:absolute;top:-10000px;left:-10000px;';
 
-    // Событие, связанное с потоком
     video.onloadedmetadata = function () {
-      // Установить ОРИГИНАЛЬНУЮ высоту видео (скриншот)
-      video.style.height = this.videoHeight + 'px'; // videoHeight
-      video.style.width = this.videoWidth + 'px'; // videoWidth
-
+      video.style.height = this.videoHeight + 'px';
+      video.style.width = this.videoWidth + 'px';
       video.play();
 
-      // Создать холст
       var canvas = document.createElement('canvas');
       canvas.width = this.videoWidth;
       canvas.height = this.videoHeight;
       var ctx = canvas.getContext('2d');
-      // Нарисовать видео на холсте
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       if (callback) {
-        // Сохранить скриншот в base64
-        callback(canvas.toDataURL(imageFormat));
+        // Compress the image before sending to callback
+        const compressedImage = compressImage(canvas, 0.5, 800, 600);
+        callback(compressedImage);
       } else {
         console.log('Нужен callback!');
       }
 
-      // Удалить скрытый видео тег
       video.remove();
       try {
-        // Уничтожить соединение с потоком
         stream.getTracks()[0].stop();
       } catch (e) {}
     };
@@ -123,45 +175,110 @@ async function fullscreenScreenshot(callback, imageFormat) {
     console.log('Screenshot error:', e);
   };
 
-  try {
-    // Use IPC to get desktop sources from main process
-    const sources = await ipcRenderer.invoke('get-desktop-sources');
-    
-    if (!sources || sources.length === 0) {
-      console.error('No desktop sources available');
+  // Check if desktopCapturer is available with multiple fallbacks
+  if (!desktopCapturer) {
+    try {
+      const { desktopCapturer: dc } = require('electron');
+      desktopCapturer = dc;
+    } catch (error) {
+      console.error('desktopCapturer is not available');
       return;
     }
+  }
 
-    for (const source of sources) {
-      // Фильтр: главный экран
-      if (
-        source.name === 'Entire screen' ||
-        source.name === 'Screen 1' ||
-        source.name === 'Screen 2'
-      ) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              mandatory: {
-                chromeMediaSource: 'desktop',
-                chromeMediaSourceId: source.id,
-                minWidth: 1280,
-                maxWidth: 1280,
-                minHeight: 720,
-                maxHeight: 720,
-              },
-            },
-          });
-          handleStream(stream);
+  if (!desktopCapturer || !desktopCapturer.getSources) {
+    console.error('desktopCapturer.getSources is not available');
+    return;
+  }
+
+  console.log('Attempting to get desktop sources...');
+  
+  // Use Promise-based approach for newer Electron versions
+  if (desktopCapturer.getSources.length === 1) {
+    desktopCapturer.getSources({ types: ['window', 'screen'] })
+      .then((sources) => {
+        console.log('Desktop sources retrieved:', sources.length);
+        
+        for (const source of sources) {
+          if (
+            source.name === 'Entire screen' ||
+            source.name === 'Screen 1' ||
+            source.name === 'Screen 2'
+          ) {
+            console.log('Using source:', source.name);
+            
+            navigator.mediaDevices
+              .getUserMedia({
+                audio: false,
+                video: {
+                  mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: source.id,
+                    minWidth: 800,
+                    maxWidth: 800,
+                    minHeight: 600,
+                    maxHeight: 600,
+                  },
+                },
+              })
+              .then((stream) => {
+                handleStream(stream);
+              })
+              .catch((e) => {
+                handleError(e);
+              });
+            return;
+          }
+        }
+      })
+      .catch((error) => {
+        handleError(error);
+      });
+  } else {
+    // Older API with callback
+    desktopCapturer.getSources(
+      { types: ['window', 'screen'] },
+      (error, sources) => {
+        if (error) {
+          handleError(error);
           return;
-        } catch (e) {
-          handleError(e);
+        }
+
+        console.log('Desktop sources retrieved:', sources.length);
+
+        for (const source of sources) {
+          if (
+            source.name === 'Entire screen' ||
+            source.name === 'Screen 1' ||
+            source.name === 'Screen 2'
+          ) {
+            console.log('Using source:', source.name);
+            
+            navigator.mediaDevices
+              .getUserMedia({
+                audio: false,
+                video: {
+                  mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: source.id,
+                    minWidth: 800,
+                    maxWidth: 800,
+                    minHeight: 600,
+                    maxHeight: 600,
+                  },
+                },
+              })
+              .then((stream) => {
+                handleStream(stream);
+              })
+              .catch((e) => {
+                handleError(e);
+              });
+            return;
+          }
         }
       }
-    }
-  } catch (error) {
-    console.error('Failed to get desktop sources:', error);
+    );
   }
 }
 
@@ -176,6 +293,12 @@ function pushStartAttendanceLogsToDB(
   var current_ts = Math.round(new Date().getTime() / 1000);
   var sql =
     'INSERT INTO AttendanceLogs (a_date, a_time, a_status, a_ip_address, a_time_zone, a_lat, a_long, e_id_id, o_id_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  
+  if (connection.state === 'disconnected') {
+    console.log('Connection is disconnected, skipping attendance log');
+    return;
+  }
+  
   connection.query(
     sql,
     [
@@ -190,7 +313,10 @@ function pushStartAttendanceLogsToDB(
       o_id_id,
     ],
     function (err, result) {
-      if (err) throw err;
+      if (err) {
+        console.error('Start attendance error:', err);
+        return;
+      }
       console.log('Инициализация посещаемости выполнена: ' + result.affectedRows);
     }
   );
@@ -207,6 +333,12 @@ function pushStopAttendanceLogsToDB(
   var current_ts = Math.round(new Date().getTime() / 1000);
   var sql =
     'INSERT INTO AttendanceLogs (a_date, a_time, a_status, a_ip_address, a_time_zone, a_lat, a_long, e_id_id, o_id_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  
+  if (connection.state === 'disconnected') {
+    console.log('Connection is disconnected, skipping attendance log');
+    return;
+  }
+  
   connection.query(
     sql,
     [
@@ -221,7 +353,10 @@ function pushStopAttendanceLogsToDB(
       o_id_id,
     ],
     function (err, result) {
-      if (err) throw err;
+      if (err) {
+        console.error('Stop attendance error:', err);
+        return;
+      }
       console.log('Выход из посещаемости выполнен: ' + result.affectedRows);
     }
   );
@@ -299,29 +434,35 @@ function monitoringApp(flag) {
 
     global.pyshell = new PythonShell('initApp.py', options);
 
-    const runAsync = async () => {
+    const runAsync = () => {
       if (loop_is_stopped) {
         console.log('запуск асинхронной функции');
-        await fullscreenScreenshot(function (base64data) {
+        
+        fullscreenScreenshot(function (base64data) {
+          // Check connection before inserting
+          if (connection.state === 'disconnected') {
+            console.log('Connection is disconnected, skipping screenshot');
+            return;
+          }
+          
           var sql =
             'INSERT INTO ScreenShotsMonitoring (ssm_img, ssm_log_ts, e_id_id, o_id_id) VALUES (?, ?, ?, ?)';
           connection.query(
             sql,
             [base64data, getTimeStamp(), e_id, o_id],
             function (err, result) {
-              if (err) throw err;
-              console.log(result);
-              console.log(
-                'Количество записей, вставленных для ssm: ' + result.affectedRows
-              );
+              if (err) {
+                console.error('Screenshot database error:', err);
+                return;
+              }
+              console.log('Количество записей, вставленных для ssm: ' + result.affectedRows);
             }
           );
-        }, 'image/png');
+        }, 'image/jpeg');
 
         setTimeout(() => {
           if (loop_is_stopped) {
-            let v = runAsync();
-            console.log('возвращаемое значение', v);
+            runAsync(); // Remove let v = since it's not needed
           }
         }, 10000);
 
@@ -333,9 +474,6 @@ function monitoringApp(flag) {
 
     console.log('возврат: ', runAsync());
 
-    // Power monitoring is now handled by IPC events from main process
-    // No need to set up listeners here
-
   } else {
     console.log('остановка мониторинга');
 
@@ -344,9 +482,6 @@ function monitoringApp(flag) {
     document.getElementById('start').style.visibility = 'visible';
     document.getElementById('stop').style.visibility = 'hidden';
     document.getElementById('animationStart').style.visibility = 'hidden';
-
-    // Power monitoring cleanup is handled by main process
-    // No listeners to remove here
 
     logoutMarkAttendance();
 
