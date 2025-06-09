@@ -6,6 +6,9 @@ const connection = mysql.createConnection({
   password: '',
   database: 'employeetracking',
   port: 3306,
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true
 });
 
 connection.connect((err) => {

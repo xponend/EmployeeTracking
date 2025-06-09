@@ -1,0 +1,56 @@
+{
+    "activities": [
+        {
+            "name": "Electron - destroyApp.py \u2014 EmployeeTrackingDesktop",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:09:41",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 2,
+                    "start_time": "2025-06-09 02:09:39"
+                }
+            ]
+        },
+        {
+            "name": "www.google.com",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:09:44",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 2,
+                    "start_time": "2025-06-09 02:09:41"
+                }
+            ]
+        },
+        {
+            "name": "localhost:8000",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:10:59",
+                    "hours": 0,
+                    "minutes": 1,
+                    "seconds": 15,
+                    "start_time": "2025-06-09 02:09:44"
+                }
+            ]
+        },
+        {
+            "name": "localhost:3000",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:11:01",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 2,
+                    "start_time": "2025-06-09 02:10:59"
+                }
+            ]
+        }
+    ]
+}

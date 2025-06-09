@@ -395,19 +395,33 @@ function monitoringApp(flag) {
               return;
             }
             
-            var sql =
-              'INSERT INTO ScreenShotsMonitoring (ssm_img, ssm_log_ts, e_id_id, o_id_id) VALUES (?, ?, ?, ?)';
-            connection.query(
-              sql,
-              [base64data, getTimeStamp(), e_id, o_id],
-              function (err, result) {
-                if (err) {
-                  console.error('Screenshot database error:', err);
-                  return;
-                }
-                console.log('Количество записей, вставленных для ssm: ' + result.affectedRows);
+            // First, verify the employee exists
+            const checkEmployeeSql = 'SELECT id FROM employee WHERE id = ?';
+            connection.query(checkEmployeeSql, [e_id], function(checkErr, checkResult) {
+              if (checkErr) {
+                console.error('Error checking employee:', checkErr);
+                return;
               }
-            );
+              
+              if (checkResult.length === 0) {
+                console.error('Employee ID does not exist:', e_id);
+                return;
+              }
+              
+              // Employee exists, proceed with screenshot insert
+              var sql = 'INSERT INTO ScreenShotsMonitoring (ssm_img, ssm_log_ts, e_id_id, o_id_id) VALUES (?, ?, ?, ?)';
+              connection.query(
+                sql,
+                [base64data, getTimeStamp(), e_id, o_id],
+                function (err, result) {
+                  if (err) {
+                    console.error('Screenshot database error:', err);
+                    return;
+                  }
+                  console.log('Количество записей, вставленных для ssm: ' + result.affectedRows);
+                }
+              );
+            });
           }, 'image/jpeg');
         } catch (error) {
           console.error('Screenshot capture error:', error);
@@ -473,3 +487,7 @@ function monitoringApp(flag) {
     });
   }
 }
+
+// Add this after the existing console.log statements around line 50
+console.log('Session values - e_id:', e_id, 'o_id:', o_id);
+console.log('e_id type:', typeof e_id, 'o_id type:', typeof o_id);

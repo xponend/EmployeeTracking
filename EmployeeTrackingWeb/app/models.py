@@ -132,6 +132,9 @@ class WorkProductivityDataset(models.Model):
     w_type = models.CharField(max_length=255)
     o_id = models.ForeignKey(Organization, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return f"{self.w_pds} - {self.w_type}"
+
     class Meta:
         db_table = "WorkProductivityDataset"
 

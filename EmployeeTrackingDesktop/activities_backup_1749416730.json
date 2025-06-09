@@ -298,6 +298,14 @@
                     "minutes": 0,
                     "seconds": 31,
                     "start_time": "2022-04-05 19:52:25"
+                },
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:05:16",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 15,
+                    "start_time": "2025-06-09 02:05:01"
                 }
             ]
         },
@@ -387,6 +395,136 @@
                     "minutes": 0,
                     "seconds": 9,
                     "start_time": "2022-04-05 19:55:44"
+                }
+            ]
+        },
+        {
+            "name": "Trae",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:01:39",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 2,
+                    "start_time": "2025-06-09 02:01:37"
+                }
+            ]
+        },
+        {
+            "name": "universalAccessAuthWarn",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:01:42",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 2,
+                    "start_time": "2025-06-09 02:01:39"
+                }
+            ]
+        },
+        {
+            "name": "System Settings",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:01:46",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 4,
+                    "start_time": "2025-06-09 02:01:42"
+                }
+            ]
+        },
+        {
+            "name": "System Settings - Accessibility",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:01:53",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 6,
+                    "start_time": "2025-06-09 02:01:46"
+                }
+            ]
+        },
+        {
+            "name": "Electron - destroyApp.py \u2014 EmployeeTrackingDesktop",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:04:45",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 4,
+                    "start_time": "2025-06-09 02:04:40"
+                }
+            ]
+        },
+        {
+            "name": "Trae - initApp.py \u2014 EmployeeTrackingDesktop",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:04:50",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 5,
+                    "start_time": "2025-06-09 02:04:45"
+                }
+            ]
+        },
+        {
+            "name": "claude.ai",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:04:54",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 4,
+                    "start_time": "2025-06-09 02:04:50"
+                }
+            ]
+        },
+        {
+            "name": "Electron - EmployeeTrackingDesktop",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:04:57",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 2,
+                    "start_time": "2025-06-09 02:04:54"
+                }
+            ]
+        },
+        {
+            "name": "Trae - EmployeeTrackingDesktop",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:05:01",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 4,
+                    "start_time": "2025-06-09 02:04:57"
+                }
+            ]
+        },
+        {
+            "name": "\u200eWhatsApp - \u200eWhatsApp",
+            "time_entries": [
+                {
+                    "days": 0,
+                    "end_time": "2025-06-09 02:05:27",
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 11,
+                    "start_time": "2025-06-09 02:05:16"
                 }
             ]
         }
