@@ -13,7 +13,9 @@ app.get( '/', ( req, res ) => {
     res.sendFile( __dirname + '/index.html' );
 } );
 
-
 io.of( '/stream' ).on( 'connection', stream );
 
-server.listen( 3000 );
+// Change port from 3000 to 3001 (or any other available port)
+server.listen( 3001, () => {
+    console.log('Server running on http://localhost:3001');
+});

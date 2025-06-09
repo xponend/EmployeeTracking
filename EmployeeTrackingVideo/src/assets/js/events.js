@@ -69,8 +69,8 @@ window.addEventListener( 'load', () => {
             let roomLink = `${ location.origin }?room=${ roomName.trim().replace( ' ', '_' ) }_${ helpers.generateRandomString() }`;
 
             //show message with link to room
-            document.querySelector( '#room-created' ).innerHTML = `Room successfully created. Click <a href='${ roomLink }'>here</a> to enter room. 
-                Share the room link with your partners.`;
+            document.querySelector( '#room-created' ).innerHTML = `Комната успешно создана. Нажмите <a href='${ roomLink }'>здесь</a>, чтобы войти в комнату. 
+                Поделитесь ссылкой на комнату с вашими партнерами.`;
 
             //empty the values
             document.querySelector( '#room-name' ).value = '';
@@ -78,7 +78,7 @@ window.addEventListener( 'load', () => {
         }
 
         else {
-            document.querySelector('#err-msg').innerText = "All fields are required";
+            document.querySelector('#err-msg').innerText = "Все поля обязательны для заполнения";
         }
     } );
 
@@ -104,7 +104,7 @@ window.addEventListener( 'load', () => {
         }
 
         else {
-            document.querySelector('#err-msg-username').innerText = "Please input your name";
+            document.querySelector('#err-msg-username').innerText = "Пожалуйста, введите ваше имя";
         }
     } );
 

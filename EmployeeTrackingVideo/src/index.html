@@ -44,38 +44,38 @@
 
             <div class="pull-right room-comm" hidden>
                 <span class="text-white mr-5" style="visibility:hidden">
-                    Unique Identifier: <span id='randomNumber'></span>
+                    Уникальный идентификатор: <span id='randomNumber'></span>
                 </span>
 
-                <button class="btn btn-sm rounded-0 btn-no-effect" id='toggle-video' title="Hide Video">
+                <button class="btn btn-sm rounded-0 btn-no-effect" id='toggle-video' title="Скрыть видео">
                     <i class="fa fa-video text-white"></i>
                 </button>
 
-                <button class="btn btn-sm rounded-0 btn-no-effect" id='toggle-mute' title="Mute">
+                <button class="btn btn-sm rounded-0 btn-no-effect" id='toggle-mute' title="Отключить звук">
                     <i class="fa fa-microphone-alt text-white"></i>
                 </button>
 
-                <button class="btn btn-sm rounded-0 btn-no-effect" id='share-screen' title="Share screen">
+                <button class="btn btn-sm rounded-0 btn-no-effect" id='share-screen' title="Поделиться экраном">
                     <i class="fa fa-desktop text-white"></i>
                 </button>
 
-                <button class="btn btn-sm rounded-0 btn-no-effect" id='record' title="Record">
+                <button class="btn btn-sm rounded-0 btn-no-effect" id='record' title="Записать">
                     <i class="fa fa-dot-circle text-white"></i>
                 </button>
 
                 <button class="btn btn-sm text-white pull-right btn-no-effect" id='toggle-chat-pane'>
-                    <i class="fa fa-comment"></i> <span class="badge badge-danger very-small font-weight-lighter" id='new-chat-notification' hidden>New</span>
+                    <i class="fa fa-comment"></i> <span class="badge badge-danger very-small font-weight-lighter" id='new-chat-notification' hidden>Новое</span>
                 </button>
 
                 <button class="btn btn-sm rounded-0 btn-no-effect text-white">
-                    <a href="/" class="text-white text-decoration-none"><i class="fa fa-sign-out-alt text-white" title="Leave"></i></a>
+                    <a href="/" class="text-white text-decoration-none"><i class="fa fa-sign-out-alt text-white" title="Покинуть"></i></a>
                 </button>
             </div>
         </nav>
 
         <div class="container-fluid" id='room-create' hidden>
             <div class="row">
-                <div class="col-12 h2 mt-5 text-center">Create Room</div>
+                <div class="col-12 h2 mt-5 text-center">Создать комнату</div>
             </div>
             
             <div class="row mt-2">
@@ -84,17 +84,17 @@
                 </div>
 
                 <div class="col-12 col-md-4 offset-md-4 mb-3">
-                    <label for="room-name">Room Name</label>
-                    <input type="text" id='room-name' class="form-control rounded-0" placeholder="Room Name">
+                    <label for="room-name">Название комнаты</label>
+                    <input type="text" id='room-name' class="form-control rounded-0" placeholder="Название комнаты">
                 </div>
 
                 <div class="col-12 col-md-4 offset-md-4 mb-3">
-                    <label for="your-name">Your Name</label>
-                    <input type="text" id='your-name' class="form-control rounded-0" placeholder="Your Name">
+                    <label for="your-name">Ваше имя</label>
+                    <input type="text" id='your-name' class="form-control rounded-0" placeholder="Ваше имя">
                 </div>
 
                 <div class="col-12 col-md-4 offset-md-4 mb-3">
-                    <button id='create-room' class="btn btn-block rounded-0 btn-info">Create Room</button>
+                    <button id='create-room' class="btn btn-block rounded-0 btn-info">Создать комнату</button>
                 </div>
 
                 <div class="col-12 col-md-4 offset-md-4 mb-3" id='room-created'></div>
@@ -103,7 +103,7 @@
 
         <div class="container-fluid" id='username-set' hidden>
             <div class="row">
-                <div class="col-12 h4 mt-5 text-center">Your Name</div>
+                <div class="col-12 h4 mt-5 text-center">Ваше имя</div>
             </div>
             
             <div class="row mt-2">
@@ -112,12 +112,12 @@
                 </div>
 
                 <div class="col-12 col-md-4 offset-md-4 mb-3">
-                    <label for="username">Your Name</label>
-                    <input type="text" id='username' class="form-control rounded-0" placeholder="Your Name">
+                    <label for="username">Ваше имя</label>
+                    <input type="text" id='username' class="form-control rounded-0" placeholder="Ваше имя">
                 </div>
 
                 <div class="col-12 col-md-4 offset-md-4 mb-3">
-                    <button id='enter-room' class="btn btn-block rounded-0 btn-info">Enter Room</button>
+                    <button id='enter-room' class="btn btn-block rounded-0 btn-info">Войти в комнату</button>
                 </div>
             </div>
         </div>
@@ -134,16 +134,16 @@
 
                 <div style="background-color: #0a022f;" class="col-md-3 chat-col d-print-none mb-2" id='chat-pane' hidden>
                     <div class="row">
-                        <div class="col-12 text-center h2 mb-3">CHAT</div>
+                        <div class="col-12 text-center h2 mb-3">ЧАТ</div>
                     </div>
 
                     <div id='chat-messages'></div>
 
                     <form>
                         <div class="input-group mb-3" >
-                            <textarea  id="chat-input" class="form-control rounded-0 chat-box border-info" rows='3' placeholder="Type here..."></textarea>
+                            <textarea  id="chat-input" class="form-control rounded-0 chat-box border-info" rows='3' placeholder="Введите сообщение..."></textarea>
                             <div class="input-group-append" id='chat-input-btn'>
-                                <button type="button" class="btn btn-dark rounded-0 border-info btn-no-effect">Send</button>
+                                <button type="button" class="btn btn-dark rounded-0 border-info btn-no-effect">Отправить</button>
                             </div>
                         </div>
                     </form>
