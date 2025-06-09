@@ -23,7 +23,7 @@
                                         {{result.m_start_time}}</h6>
                                     <h6 class="card-title">Дата и время окончания: {{result.m_stop_date}} {{result.m_stop_time}}
                                     </h6>
-                                    <a href="http://localhost:3001?room={{result.m_uuid}}&name={{request.session.o_name}}"
+                                    <a href="http://employeetime.zhasapp.com/video?room={{result.m_uuid}}&name={{request.session.o_name}}"
                                         target="_blank" class="btn btn-primary">Присоединиться к встрече</a>
                                     <a href="edit-meet/{{result.id}}" class="btn btn-warning">Редактировать встречу</a>
                                     <a href="del-meet/{{result.id}}" class="btn btn-danger">Удалить встречу</a>
