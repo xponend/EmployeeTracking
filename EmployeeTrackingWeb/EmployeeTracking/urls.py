@@ -13,11 +13,16 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from django.urls import path, include, re_path
+from django.views.static import serve
 import app.views as av
 
-
 urlpatterns = [
+    # ACME Challenge for SSL certificates
+    path('.well-known/acme-challenge/<str:token>', av.acme_challenge, name='acme-challenge'),
+    
     path('',av.index),
     path('LoginOrg', av.org_login),
     path('SignUpOrg',av.org_register),
@@ -109,3 +114,9 @@ urlpatterns = [
 ]
 
 handler404 = "app.views.error_404_view"
+
+
+# ACME Challenge static file serving
+re_path(r'^.well-known/acme-challenge/(?P<path>.*)$', serve, {
+    'document_root': os.path.join(settings.BASE_DIR, '.well-known', 'acme-challenge'),
+}),

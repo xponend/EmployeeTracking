@@ -24,7 +24,8 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, Http404
+import os
 
 import math
 import random
@@ -2097,6 +2098,22 @@ def get_emp_logged_in_count_today(request):
         o_id=o_id, a_date=datetime.datetime.today().strftime("%Y-%#m-%#d"), a_status=1
     ).count()
     return JsonResponse({"total_emps": total_emps, "logged_in_count": logged_in_count})
+
+
+def acme_challenge(request, token):
+    """
+    Handle ACME challenge requests for SSL certificate validation
+    """
+    # Path where ACME challenge files are stored
+    challenge_dir = os.path.join(settings.BASE_DIR, '.well-known', 'acme-challenge')
+    challenge_file = os.path.join(challenge_dir, token)
+    
+    try:
+        with open(challenge_file, 'r') as f:
+            challenge_content = f.read().strip()
+        return HttpResponse(challenge_content, content_type='text/plain')
+    except FileNotFoundError:
+        raise Http404("Challenge file not found")
 
 
 @csrf_exempt

@@ -156,3 +156,6 @@ EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 EMAIL_HOST_USER = "xponend@gmail.com"
 EMAIL_HOST_PASSWORD = "prxzlqccgyjnaqip"
+
+# ACME Challenge directory for SSL certificate validation
+ACME_CHALLENGE_DIR = os.path.join(BASE_DIR, '.well-known', 'acme-challenge')
